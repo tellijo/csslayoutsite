@@ -1,44 +1,71 @@
-// Sample grunt-jekyll grunt.js file
-// https://github.com/dannygarcia/grunt-jekyll
+/* jshint node:true, camelcase:false */
 
-/*global module:false*/
+var fs = require('fs');
+
 module.exports = function(grunt) {
 
-    // Project configuration.
-    grunt.initConfig({
+  // params
+  var lang = grunt.option('lang') || 'en';
+  var ftpDir = 'learnlayout';
+  if (lang !== 'en') {
+    ftpDir += '_' + lang;
+  }
 
-        jekyll: {
-            server : {
-                src : 'templates',
-                dest: 'dev',
-                server : true,
-                server_port : 8000,
-                auto : true,
-                pygments: true
-            },
-            dev: {
-                src: 'templates',
-                dest: 'dev',
-                pygments: true
-            },
-            prod: {
-                src: 'templates',
-                dest: 'prod',
-                pygments: true
-            }
-        },
+  // test for valid language
+  try {
+    fs.statSync('translations/' + lang + '.yaml');
+  }
+  catch (e) {
+    grunt.fail.fatal('Invalid language "' + lang + '"');
+  }
+  grunt.log.write('Language: ' + lang);
 
-        watch: { // for development run 'grunt watch'
-            jekyll: {
-                files: ['templates/*.html'],
-                tasks: ['jekyll:dev']
-            }
+  // config
+  grunt.initConfig({
+
+    jekyll: {
+      options: {
+        src: 'templates',
+        plugins: '_plugins',
+        dest: '_site',
+        pygments: true,
+        raw: 'lang: ' + lang
+      },
+      build: {},
+      serve: {
+        options: {
+          watch: true,
+          serve: true
         }
-    });
+      }
+    },
 
-    // Default task. Run standard jekyll server.
-    grunt.registerTask('default', 'jekyll:server');
+    'ftp-deploy': {
+      build: {
+        auth: {
+          host: 'startcontinue.com',
+          port: 21
+        },
+        src: '_site',
+        dest: ftpDir,
+        exclusions: [
+          'Gruntfile.js',
+          'package.json',
+          '.git*',
+          'node_modules'
+        ]
+      }
+    }
 
-    // plugin tasks
-    grunt.loadNpmTasks('grunt-jekyll');
+  });
+
+  // plugins
+  grunt.loadNpmTasks('grunt-jekyll');
+  grunt.loadNpmTasks('grunt-ftp-deploy');
+
+  // tasks
+  grunt.registerTask('default', ['jekyll:build']);
+  grunt.registerTask('serve', ['jekyll:serve']);
+  grunt.registerTask('deploy', ['default', 'ftp-deploy']);
+
 };

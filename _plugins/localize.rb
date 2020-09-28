@@ -8,8 +8,12 @@ module Jekyll
     end
 
     def render(context)
+      defaultsPath = "translations/defaults.yaml"
       @lang = context.registers[:site].config['lang']
       @translations = YAML::load(File.open("translations/#{@lang}.yaml"))
+      if File.exist? defaultsPath
+        @defaults = YAML::load(File.open(defaultsPath))
+      end
       @init = true
 
       if @key[0..3] == 'page'
@@ -23,13 +27,19 @@ module Jekyll
       
       result = @translations[@key]
 
+      if result.nil? and defined? @defaults
+        result = @defaults[@key]
+      end
+
       "#{result}"
     end
   end
 
   class RtlTag < Liquid::Tag
     def render(context)
-      rtl = context.registers[:site].config['rtl']
+      @lang = context.registers[:site].config['lang']
+      @translations = YAML::load(File.open("translations/#{@lang}.yaml"))
+      rtl = @translations['rtl']
       if rtl == true
         "rtl"
       else
